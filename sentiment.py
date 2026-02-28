@@ -1,7 +1,6 @@
 import pandas as pd
 import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
-from sklearn.metrics import accuracy_score
 import os
 
 nltk.download('vader_lexicon')
@@ -9,52 +8,48 @@ nltk.download('vader_lexicon')
 # Create output folder
 os.makedirs("output", exist_ok=True)
 
-# Load dataset
-data = pd.read_csv("Reviews.csv")
+input_file = "Reviews.csv"
+output_file = "output/sentiment_output.csv"
 
-# 🔥 FIX: clean column names
-data.columns = data.columns.str.strip()
-
-# Now this WILL work
-data = data[['Text', 'Score']]
-data.rename(columns={'Text': 'review'}, inplace=True)
-
-# Convert rating to real sentiment
-def score_to_sentiment(score):
-    if score >= 4:
-        return "Positive"
-    elif score <= 2:
-        return "Negative"
-    else:
-        return "Neutral"
-
-data['real_sentiment'] = data['Score'].apply(score_to_sentiment)
-data.drop(columns=['Score'], inplace=True)
-
-# Initialize VADER
+# Initialize VADER once
 sia = SentimentIntensityAnalyzer()
 
-def predict_sentiment(review):
-    score = sia.polarity_scores(str(review))['compound']
-    if score >= 0.05:
-        return "Positive"
-    elif score <= -0.05:
-        return "Negative"
-    else:
-        return "Neutral"
+# Remove output file if already exists
+if os.path.exists(output_file):
+    os.remove(output_file)
 
-# Apply sentiment analysis
-data['predicted_sentiment'] = data['review'].apply(predict_sentiment)
+# Process CSV in chunks
+chunk_size = 50000  # you can change: 10k / 50k / 100k
 
-# Accuracy
-accuracy = accuracy_score(
-    data['real_sentiment'],
-    data['predicted_sentiment']
-)
+for chunk in pd.read_csv(input_file, chunksize=chunk_size):
+    
+    # Clean column names
+    chunk.columns = chunk.columns.str.strip()
 
-print("Total reviews:", len(data))
-print("Accuracy:", accuracy)
+    # Keep required columns
+    chunk = chunk[['Text', 'Score']]
+    chunk.rename(columns={'Text': 'review'}, inplace=True)
 
-# Save output CSV
-data.to_csv("output/sentiment_output.csv", index=False)
-print("✅ Output saved to output/sentiment_output.csv")
+    # REAL binary sentiment from rating
+    chunk['real_sentiment'] = chunk['Score'].apply(
+        lambda x: "Positive" if x >= 4 else "Negative"
+    )
+    chunk.drop(columns=['Score'], inplace=True)
+
+    # Predicted binary sentiment
+    chunk['predicted_sentiment'] = chunk['review'].apply(
+        lambda x: "Positive"
+        if sia.polarity_scores(str(x))['compound'] >= 0
+        else "Negative"
+    )
+
+    # Append to output CSV
+    chunk.to_csv(
+        output_file,
+        mode='a',
+        index=False,
+        header=not os.path.exists(output_file)
+    )
+
+print("✅ Large dataset processed successfully")
+print("Output saved to:", output_file)
