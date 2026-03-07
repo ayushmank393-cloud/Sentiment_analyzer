@@ -10,15 +10,6 @@ It reads reviews from a **CSV file** and generates sentiment results in another 
 * NLTK (VADER)
 * Scikit-learn
 
-## 📁Folder Structure
-
-sentiment_system/
-│
-├── Reviews.csv
-├── sentiment.py
-└── output/
-    └── sentiment_output.csv
-
 ## 📊Dataset
 
 * Source: Kaggle – Amazon Fine Food Reviews
@@ -49,4 +40,5 @@ python sentiment.py
 
 ##📝 Note
 No UI is used. The system works as a **backend CSV processing pipeline**, which is standard in industry projects.
+
 
